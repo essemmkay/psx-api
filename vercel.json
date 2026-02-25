@@ -1,0 +1,18 @@
+{
+  "rewrites": [
+    { "source": "/indices", "destination": "/api/indices" },
+    { "source": "/indices/:symbol", "destination": "/api/indices/:symbol" },
+    { "source": "/stocks", "destination": "/api/stocks" },
+    { "source": "/stocks/:symbol", "destination": "/api/stocks/:symbol" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
+      ]
+    }
+  ]
+}

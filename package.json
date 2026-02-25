@@ -1,0 +1,22 @@
+{
+  "name": "psx-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx vercel dev",
+    "start": "npx tsx server.ts",
+    "build": "tsc",
+    "vercel-build": "tsc"
+  },
+  "dependencies": {
+    "@vercel/functions": "^3.4.0",
+    "@vercel/node": "^3.0.0",
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vercel": "^37.0.0"
+  }
+}
