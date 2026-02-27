@@ -62,6 +62,9 @@ export async function getIndices(): Promise<IndexOHLCV[]> {
       const changePercent = colChangePct >= 0 ? parsePercent(cells.eq(colChangePct).text()) : null;
 
       if (close === null) return;
+      // Open not on indices page: use previous close (close - change) as opening reference
+      const open =
+        change !== null && Number.isFinite(close - change) ? close - change : null;
       out.push({
         symbol,
         high: high ?? close,
@@ -69,13 +72,63 @@ export async function getIndices(): Promise<IndexOHLCV[]> {
         close,
         change: change ?? null,
         changePercent: changePercent ?? null,
-        open: null,
+        open,
         volume: null,
       });
     });
     if (out.length > 0) break;
   }
+
+  // Enrich volume from index constituent pages (KSE100, KSE30, ALLSHR have constituent tables with VOLUME)
+  const volumeBySymbol = await getConstituentVolumesByIndex();
+  for (const row of out) {
+    const total = volumeBySymbol.get(row.symbol);
+    if (total != null) row.volume = total;
+  }
+
   return out;
+}
+
+/**
+ * Fetch index constituent pages and return total traded volume per index (sum of constituent volumes).
+ * Only indices with a constituent page (KSE100, KSE30, ALLSHR) will have an entry.
+ */
+async function getConstituentVolumesByIndex(): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  const headers = { "User-Agent": "PSX-API/1.0" };
+
+  for (const slug of INDEX_CONSTITUENT_SLUGS) {
+    try {
+      const res = await fetch(`${BASE_URL}/indices/${encodeURIComponent(slug)}`, {
+        headers,
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+      const $ = cheerio.load(html);
+      const tables = $("table");
+      let totalVolume = 0;
+      for (let i = 0; i < tables.length; i++) {
+        const table = tables.eq(i);
+        const headerTexts = table
+          .find("thead th")
+          .map((_, el) => $(el).text().trim().toUpperCase())
+          .get();
+        const colVolume = headerTexts.findIndex((h) => /^VOLUME$/i.test(h));
+        if (colVolume < 0) continue;
+        table.find("tbody tr").each((_, row) => {
+          const cells = $(row).find("td");
+          if (cells.length <= colVolume) return;
+          const v = parseNum(cells.eq(colVolume).text());
+          if (v != null) totalVolume += v;
+        });
+        if (totalVolume > 0) break;
+      }
+      if (totalVolume > 0) result.set(slug, totalVolume);
+    } catch {
+      // skip this index
+    }
+  }
+  return result;
 }
 
 /**
